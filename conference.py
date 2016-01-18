@@ -40,6 +40,7 @@ from models import TeeShirtSize
 from models import Session
 from models import SessionForm
 from models import SessionForms
+from models import MuratTestForm
 
 from settings import WEB_CLIENT_ID
 from settings import ANDROID_CLIENT_ID
@@ -60,6 +61,13 @@ DEFAULTS = {
     "maxAttendees": 0,
     "seatsAvailable": 0,
     "topics": [ "Default", "Topic" ],
+}
+
+SESS_DEFAULTS = {
+    "speaker": "Default Speaker",
+    "sessionType": "Lecture",
+    "startTime": "Not Specified",
+    "duration": 60
 }
 
 OPERATORS = {
@@ -85,6 +93,18 @@ CONF_GET_REQUEST = endpoints.ResourceContainer(
 
 CONF_POST_REQUEST = endpoints.ResourceContainer(
     ConferenceForm,
+    websafeConferenceKey=messages.StringField(1),
+)
+
+SESS_GET_REQUEST = endpoints.ResourceContainer(
+    message_types.VoidMessage,
+    websafeConferenceKey=messages.StringField(1),
+    sessionType=messages.StringField(2),
+    speaker=messages.StringField(3),
+)
+
+SESS_POST_REQUEST = endpoints.ResourceContainer(
+    SessionForm,
     websafeConferenceKey=messages.StringField(1),
 )
 
@@ -554,5 +574,34 @@ class ConferenceApi(remote.Service):
             items=[self._copyConferenceToForm(conf, "") for conf in q]
         )
 
+# - - - Sessions - - - - - - - - - - - - - - - - - - - -
+    def _copySessionToForm(self, session):
+        form = SessionForm()
+        for field in form.all_fields():
+            if hasattr(session, field.name):
+                setattr(form, field.name, getattr(session, field.name))
+        form.check_initialized()
+        return form
+
+
+    @endpoints.method(SESS_POST_REQUEST,
+                      SessionForm,
+                      path='sessions',
+                      http_method='POST',
+                      name='createSession')
+    def createSession(self, request):
+        """Create new session"""
+        session = None 
+        return self._copySessionToForm(session)
+
+
+
+
 
 api = endpoints.api_server([ConferenceApi]) # register API
+
+
+
+
+
+

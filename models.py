@@ -125,7 +125,8 @@ class SessionForm(messages.Message):
 class SessionForms(messages.Message):
     items = messages.MessageField(SessionForm, 1, repeated=True)
 
-
+class MuratTestForm(messages.Message):
+    text = messages.StringField(1)
 
 
 
