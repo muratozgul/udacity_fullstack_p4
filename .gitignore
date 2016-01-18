@@ -2,6 +2,7 @@ node_modules
 bower_components
 gitignore
 *.DS_Store
+*.pyc
 
 # Grunt intermediate storage (http://gruntjs.com/creating-plugins#storing-task-files)
 .grunt

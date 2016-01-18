@@ -583,6 +583,54 @@ class ConferenceApi(remote.Service):
         form.check_initialized()
         return form
 
+    def _createSessionObject(self, request):
+        """Create or update Session object, returning SessionForm/request."""
+        # preload necessary data items
+        user = endpoints.get_current_user()
+        if not user:
+            raise endpoints.UnauthorizedException('Authorization required')
+        user_id = getUserId(user)
+
+        if not request.name:
+            raise endpoints.BadRequestException("Session 'name' field required")
+
+        if not request.websafeConferenceKey:
+            raise endpoints.BadRequestException("Conference 'websafeConferenceKey' field required")
+
+        #https://cloud.google.com/appengine/docs/python/ndb/keyclass
+        conference_key = ndb.Key(urlsafe=request.websafeConferenceKey)
+
+        if not conference_key:
+            raise endpoints.BadRequestException("Invalid 'websafeConferenceKey' field")
+
+        conference = conference_key.get()
+        if not conference:
+            raise endpoints.BadRequestException("Conference " + str(conference) + " not found")
+
+        if conference.organizerUserId != user_id:
+            raise endpoints.UnauthorizedException('Unauthorized action')
+
+        # copy ConferenceForm/ProtoRPC Message into dict
+        data = {field.name: getattr(request, field.name) for field in request.all_fields()}
+        del data['websafeConferenceKey']
+
+        # add default values for those missing (both data model & outbound Message)
+        for df in SESS_DEFAULTS:
+            if data[df] in (None, []):
+                data[df] = SESS_DEFAULTS[df]
+                setattr(request, df, SESS_DEFAULTS[df])
+
+        # create Session as a child of the conference
+        session_id = Session.allocate_ids(size=1, parent=conference_key)[0]
+        session_key = ndb.Key(Session, session_id, parent=conference_key)
+
+        # https://cloud.google.com/appengine/docs/python/ndb/modelclass
+        session = Session(**data)
+        session.put()
+        #print session._properties
+
+        return request
+
 
     @endpoints.method(SESS_POST_REQUEST,
                       SessionForm,
@@ -591,7 +639,7 @@ class ConferenceApi(remote.Service):
                       name='createSession')
     def createSession(self, request):
         """Create new session"""
-        session = None 
+        session = self._createSessionObject(request)
         return self._copySessionToForm(session)
 
 
