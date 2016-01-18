@@ -67,7 +67,7 @@ SESS_DEFAULTS = {
     "speaker": "Default Speaker",
     "sessionType": "Lecture",
     "startTime": "Not Specified",
-    "duration": 60
+    "duration": 60,
 }
 
 OPERATORS = {
@@ -623,6 +623,7 @@ class ConferenceApi(remote.Service):
         # create Session as a child of the conference
         session_id = Session.allocate_ids(size=1, parent=conference_key)[0]
         session_key = ndb.Key(Session, session_id, parent=conference_key)
+        data['key'] = session_key
 
         # https://cloud.google.com/appengine/docs/python/ndb/modelclass
         session = Session(**data)
@@ -643,9 +644,32 @@ class ConferenceApi(remote.Service):
         return self._copySessionToForm(session)
 
 
+    @endpoints.method(SESS_GET_REQUEST,
+                      SessionForms,
+                      path='conference/{websafeConferenceKey}/sessions',
+                      http_method='GET',
+                      name='getConferenceSessions')
+    def getConferenceSessions(self, request):
+        """Given a conference, return all sessions"""
+        sessions = Session.query(ancestor=ndb.Key(urlsafe=request.websafeConferenceKey)).fetch()
+        return SessionForms(items=[self._copySessionToForm(session) for session in sessions])
+
+
+    @endpoints.method(SESS_GET_REQUEST,
+                      SessionForms,
+                      path='conference/{websafeConferenceKey}/sessions/{sessionType}',
+                      http_method='GET',
+                      name='getConferenceSessionsByType')
+    def getConferenceSessionsByType(self, request):
+        """Given a conference, return all sessions of a specified type (eg lecture, keynote, workshop)"""
+        sessions = Session.query(ancestor=ndb.Key(urlsafe=request.websafeConferenceKey))
+        #https://cloud.google.com/appengine/docs/python/ndb/queries#attributes
+        sessions = sessions.filter(Session.sessionType == request.sessionType).fetch()
+        return SessionForms(items=[self._copySessionToForm(session) for session in sessions])
 
 
 
+#ahhkZXZ-bW96Z3VsLXVkYWNpdHktZnMtcDRyNQsSB1Byb2ZpbGUiGG11cmF0Lm96Z3VsQHdlc3QuY211LmVkdQwLEgpDb25mZXJlbmNlGAEM
 api = endpoints.api_server([ConferenceApi]) # register API
 
 
