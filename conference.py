@@ -63,10 +63,10 @@ DEFAULTS = {
 }
 
 SESS_DEFAULTS = {
-    "speaker": "Default Speaker",
-    "sessionType": "Lecture",
+    "speaker": "Not Specified",
+    "sessionType": "Not Specified",
     "startTime": "Not Specified",
-    "duration": 60,
+    "duration": 0,
 }
 
 OPERATORS = {
@@ -766,7 +766,42 @@ class ConferenceApi(remote.Service):
         # return set of Sessions
         return SessionForms(items=[self._copySessionToForm(session) for session in sessions])
 
-     
+
+# - - - Task-3 - Work On Indexes - - - - - - - - - - - - - - - - - - - -
+    
+    # Query-1
+    @endpoints.method(message_types.VoidMessage,
+                      SessionForms,
+                      path='sessions/incomplete',
+                      http_method='GET',
+                      name='getSessionsWithMissingData')
+    def getSessionsWithMissingData(self, request):
+        """query for all the sessions that has missing properties"""
+        # for quality user experience, these incomplete sessions can be fixed or deleted
+        sessions = Session.query(ndb.OR(Session.speaker == SESS_DEFAULTS["speaker"],
+                                        Session.sessionType == SESS_DEFAULTS["sessionType"],
+                                        Session.startTime == SESS_DEFAULTS["startTime"],
+                                        Session.duration == SESS_DEFAULTS["duration"])).fetch()
+        # return set of Sessions
+        return SessionForms(items=[self._copySessionToForm(session) for session in sessions])
+
+    # Query-2
+    @endpoints.method(message_types.VoidMessage,
+                      SessionForms,
+                      path='sessions/lightning',
+                      http_method='GET',
+                      name='getLightningTalks')
+    def getLightningTalks(self, request):
+        """query for all the sessions that are between 5-20 mins long"""
+        #https://cloud.google.com/appengine/docs/python/datastore/gqlreference
+        sessions = ndb.gql("SELECT * FROM Session WHERE duration >= 5 AND duration <= 20").fetch()
+
+        # return set of Sessions
+        return SessionForms(items=[self._copySessionToForm(session) for session in sessions])
+
+
+# - - - Task-4 - Add a Task - - - - - - - - - - - - - - - - - - - -
+
 
 #ahhkZXZ-bW96Z3VsLXVkYWNpdHktZnMtcDRyNQsSB1Byb2ZpbGUiGG11cmF0Lm96Z3VsQHdlc3QuY211LmVkdQwLEgpDb25mZXJlbmNlGAEM
 api = endpoints.api_server([ConferenceApi]) # register API
