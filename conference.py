@@ -40,7 +40,6 @@ from models import TeeShirtSize
 from models import Session
 from models import SessionForm
 from models import SessionForms
-from models import MuratTestForm
 
 from settings import WEB_CLIENT_ID
 from settings import ANDROID_CLIENT_ID
@@ -106,6 +105,15 @@ SESS_GET_REQUEST = endpoints.ResourceContainer(
 SESS_POST_REQUEST = endpoints.ResourceContainer(
     SessionForm,
     websafeConferenceKey=messages.StringField(1),
+)
+
+WISH_GET_REQUEST = endpoints.ResourceContainer(
+    message_types.VoidMessage,
+    websafeSessionKey=messages.StringField(1),
+)
+
+WISH_POST_REQUEST = endpoints.ResourceContainer(
+    websafeSessionKey=messages.StringField(1),
 )
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -574,7 +582,7 @@ class ConferenceApi(remote.Service):
             items=[self._copyConferenceToForm(conf, "") for conf in q]
         )
 
-# - - - Sessions - - - - - - - - - - - - - - - - - - - -
+# - - - Task-1 - Sessions - - - - - - - - - - - - - - - - - - - -
     def _copySessionToForm(self, session):
         form = SessionForm()
         for field in form.all_fields():
@@ -662,9 +670,12 @@ class ConferenceApi(remote.Service):
                       name='getConferenceSessionsByType')
     def getConferenceSessionsByType(self, request):
         """Given a conference, return all sessions of a specified type (eg lecture, keynote, workshop)"""
-        sessions = Session.query(ancestor=ndb.Key(urlsafe=request.websafeConferenceKey))
         #https://cloud.google.com/appengine/docs/python/ndb/queries#attributes
-        sessions = sessions.filter(Session.sessionType == request.sessionType).fetch()
+        sessions = (
+            Session.query(ancestor=ndb.Key(urlsafe=request.websafeConferenceKey))
+            .filter(Session.sessionType == request.sessionType)
+            .fetch()
+        )
         return SessionForms(items=[self._copySessionToForm(session) for session in sessions])
 
 
@@ -680,6 +691,80 @@ class ConferenceApi(remote.Service):
             sessions = Session.query().filter(Session.speaker == request.speaker).fetch()
         return SessionForms(items=[self._copySessionToForm(session) for session in sessions])
 
+# - - - Task-2 - Add Sessions to User Wishlist - - - - - - - - - - - - - - - - - - - -
+    #@ndb.transactional(xg=True)
+    def _wishlistSession(self, request, wish=True):
+        """Add or remove session from user wishlist."""
+        retval = None
+        # get user Profile
+        prof = self._getProfileFromUser() 
+
+        # check if session exists given websafeSessionKey
+        wssk = request.websafeSessionKey
+        session = ndb.Key(urlsafe=wssk).get()
+        if not session:
+            raise endpoints.NotFoundException('No session found with key: %s' % wssk)
+
+        # add to wishlist
+        if wish:
+            # check if session already wishlisted
+            if wssk in prof.sessionKeysWishlisted:
+                raise ConflictException("You have already wishlisted this session")
+
+            # add to wishlist
+            prof.sessionKeysWishlisted.append(wssk)
+            retVal = True
+
+        # remove from wishlist
+        else:
+            # check if session already wishlisted
+            if wssk in prof.sessionKeysWishlisted:
+                # remove
+                prof.sessionKeysWishlisted.remove(wssk)
+                retval = True
+            else:
+                retval = False
+
+        # write things back to the datastore & return
+        prof.put()
+        return BooleanMessage(data=retval)
+
+    
+    @endpoints.method(WISH_GET_REQUEST,
+                      BooleanMessage,
+                      path='wishlist/{websafeSessionKey}',
+                      http_method='POST',
+                      name='addSessionToWishlist')
+    def addSessionToWishlist(self, request):
+        """adds the session to the user's list of sessions they are interested in attending"""
+        return self._wishlistSession(request)
+
+
+    @endpoints.method(WISH_GET_REQUEST, 
+                      BooleanMessage,
+                      path='wishlist/{websafeSessionKey}',
+                      http_method='DELETE', 
+                      name='deleteSessionInWishlist')
+    def deleteSessionInWishlist(self, request):
+        """removes the session from the user's list of sessions they are interested in attending"""
+        return self._wishlistSession(request, wish=False)
+
+
+    @endpoints.method(message_types.VoidMessage, 
+                      SessionForms,
+                      path='wishlist',
+                      http_method='GET', 
+                      name='getSessionsInWishlist')
+    def getSessionsInWishlist(self, request):
+        """query for all the sessions in a conference that the user is interested in"""
+        prof = self._getProfileFromUser() # get user Profile
+        session_keys = [ndb.Key(urlsafe=wssk) for wssk in prof.sessionKeysWishlisted]
+        sessions = ndb.get_multi(session_keys)
+
+        # return set of Sessions
+        return SessionForms(items=[self._copySessionToForm(session) for session in session])
+
+     
 
 #ahhkZXZ-bW96Z3VsLXVkYWNpdHktZnMtcDRyNQsSB1Byb2ZpbGUiGG11cmF0Lm96Z3VsQHdlc3QuY211LmVkdQwLEgpDb25mZXJlbmNlGAEM
 api = endpoints.api_server([ConferenceApi]) # register API
