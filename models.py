@@ -118,12 +118,14 @@ class Session(ndb.Model):
     duration = ndb.IntegerProperty()
 
 class SessionForm(messages.Message):
+    """SessionForm -- Session outbound form message"""
     name = messages.StringField(1)
     #name_lower = ndb.ComputedProperty(lambda self: self.name.lower())
     speaker = messages.StringField(2)
     sessionType = messages.StringField(3)
     startTime = messages.StringField(4)
     duration = messages.IntegerField(5)
+    urlsafe_id = messages.StringField(6)
 
 class SessionForms(messages.Message):
     items = messages.MessageField(SessionForm, 1, repeated=True)

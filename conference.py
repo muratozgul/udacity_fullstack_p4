@@ -588,6 +588,8 @@ class ConferenceApi(remote.Service):
         for field in form.all_fields():
             if hasattr(session, field.name):
                 setattr(form, field.name, getattr(session, field.name))
+        # set urlsafe id
+        setattr(form, "urlsafe_id", session.key.urlsafe()) 
         form.check_initialized()
         return form
 
@@ -638,7 +640,7 @@ class ConferenceApi(remote.Service):
         session.put()
         #print session._properties
 
-        return request
+        return session
 
 
     @endpoints.method(SESS_POST_REQUEST,
@@ -762,7 +764,7 @@ class ConferenceApi(remote.Service):
         sessions = ndb.get_multi(session_keys)
 
         # return set of Sessions
-        return SessionForms(items=[self._copySessionToForm(session) for session in session])
+        return SessionForms(items=[self._copySessionToForm(session) for session in sessions])
 
      
 
