@@ -35,6 +35,32 @@ App Engine application for the Udacity training course.
 Name: mozgul-udacity-fs-p4  
 Access: [mozgul-udacity-fs-p4.appspot.com](https://mozgul-udacity-fs-p4.appspot.com)
 
+## Task 1:
+
+#### Design Decisions:  
+Session is an entity with Conference used as its ancestor.
+Conference serves like a container for sessions. For example we access the date of the session from its parent Conference.  
+
+```py
+class Session(ndb.Model):
+    name = ndb.StringProperty(required=True)
+    speaker = ndb.StringProperty()
+    sessionType = ndb.StringProperty()
+    startTime = ndb.StringProperty()
+    duration = ndb.IntegerProperty()
+
+class SessionForm(messages.Message):
+    """SessionForm -- Session outbound form message"""
+    name = messages.StringField(1)
+    speaker = messages.StringField(2)
+    sessionType = messages.StringField(3)
+    startTime = messages.StringField(4)
+    duration = messages.IntegerField(5)
+    urlsafe_id = messages.StringField(6)
+```  
+For simplicity speaker is a string, not a separate entity.
+Also for simplicity, startTime is a string field.
+
 ## Task 3: 
 
 ### Query Problem
