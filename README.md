@@ -30,3 +30,15 @@ App Engine application for the Udacity training course.
 [4]: https://console.developers.google.com/
 [5]: https://localhost:8080/
 [6]: https://developers.google.com/appengine/docs/python/endpoints/endpoints_tool
+
+Solve the following query related problem  
+
+Let’s say that you don't like workshops and you don't like sessions after 7 pm. How would you handle a query for all non-workshop sessions before 7 pm? What is the problem for implementing this query? What ways to solve it did you think of?  
+
+Inequality filters are limited to at most one property  
+
+https://cloud.google.com/datastore/docs/concepts/queries#Datastore_Restrictions_on_queries  
+To avoid having to scan the entire index, the query mechanism relies on all of a query's potential results being adjacent to one another in the index. To satisfy this constraint, a single query may not use inequality comparisons (LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL) on more than one property across all of its filters.
+
+Option 1) Apply one inequality filter, do the rest of the filtering by manually iterating  
+Option 2) Enumerate possible types (lecture, workshop, training, qa) and use equalities or IN operator for the types other than the undesired ones

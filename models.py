@@ -120,7 +120,6 @@ class Session(ndb.Model):
 class SessionForm(messages.Message):
     """SessionForm -- Session outbound form message"""
     name = messages.StringField(1)
-    #name_lower = ndb.ComputedProperty(lambda self: self.name.lower())
     speaker = messages.StringField(2)
     sessionType = messages.StringField(3)
     startTime = messages.StringField(4)

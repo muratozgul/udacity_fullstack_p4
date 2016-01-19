@@ -51,8 +51,10 @@ from utils import getUserId
 EMAIL_SCOPE = endpoints.EMAIL_SCOPE
 API_EXPLORER_CLIENT_ID = endpoints.API_EXPLORER_CLIENT_ID
 MEMCACHE_ANNOUNCEMENTS_KEY = "RECENT_ANNOUNCEMENTS"
+MEMCACHE_FEATURED_SPEAKER_KEY = "FEATURED_SPEAKER"
 ANNOUNCEMENT_TPL = ('Last chance to attend! The following conferences '
                     'are nearly sold out: %s')
+FEATURED_SPEAKER_TPL = 'Featured speaker: %s'
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 DEFAULTS = {
@@ -583,6 +585,7 @@ class ConferenceApi(remote.Service):
         )
 
 # - - - Task-1 - Sessions - - - - - - - - - - - - - - - - - - - -
+
     def _copySessionToForm(self, session):
         form = SessionForm()
         for field in form.all_fields():
@@ -623,6 +626,7 @@ class ConferenceApi(remote.Service):
         # copy ConferenceForm/ProtoRPC Message into dict
         data = {field.name: getattr(request, field.name) for field in request.all_fields()}
         del data['websafeConferenceKey']
+        del data['urlsafe_id']
 
         # add default values for those missing (both data model & outbound Message)
         for df in SESS_DEFAULTS:
@@ -638,8 +642,10 @@ class ConferenceApi(remote.Service):
         # https://cloud.google.com/appengine/docs/python/ndb/modelclass
         session = Session(**data)
         session.put()
-        #print session._properties
 
+        # update featured speakers (task-4)
+        taskqueue.add(params={'speaker': session.speaker}, url='/tasks/set_featured_speaker')
+        
         return session
 
 
@@ -693,7 +699,9 @@ class ConferenceApi(remote.Service):
             sessions = Session.query().filter(Session.speaker == request.speaker).fetch()
         return SessionForms(items=[self._copySessionToForm(session) for session in sessions])
 
+
 # - - - Task-2 - Add Sessions to User Wishlist - - - - - - - - - - - - - - - - - - - -
+
     #@ndb.transactional(xg=True)
     def _wishlistSession(self, request, wish=True):
         """Add or remove session from user wishlist."""
@@ -801,9 +809,31 @@ class ConferenceApi(remote.Service):
 
 
 # - - - Task-4 - Add a Task - - - - - - - - - - - - - - - - - - - -
+    
+    @staticmethod
+    def _cacheFeaturedSpeaker(speaker):
+        """When a new session is added to a conference, check the speaker."""
+        sessions = Session.query(Session.speaker == speaker).fetch()
+        if len(sessions) > 1:
+            output = speaker + ", sessions: " + (', '.join(s.name for s in sessions))
+            featured = FEATURED_SPEAKER_TPL % output
+            memcache.set(MEMCACHE_FEATURED_SPEAKER_KEY, featured)
+
+
+    @endpoints.method(message_types.VoidMessage, 
+                      StringMessage,
+                      path='sessions/featured',
+                      http_method='GET',
+                      name='getFeaturedSpeaker')
+    def getFeaturedSpeaker(self, request):
+        """Return speakers with more than one session at the same conference"""
+        return StringMessage(data=memcache.get(MEMCACHE_FEATURED_SPEAKER_KEY) or "")
 
 
 #ahhkZXZ-bW96Z3VsLXVkYWNpdHktZnMtcDRyNQsSB1Byb2ZpbGUiGG11cmF0Lm96Z3VsQHdlc3QuY211LmVkdQwLEgpDb25mZXJlbmNlGAEM
+#ahZzfm1vemd1bC11ZGFjaXR5LWZzLXA0cjULEgdQcm9maWxlIhhtdXJhdC5vemd1bEB3ZXN0LmNtdS5lZHUMCxIKQ29uZmVyZW5jZRgBDA
+
+#ahZzfm1vemd1bC11ZGFjaXR5LWZzLXA0ckMLEgdQcm9maWxlIhhtdXJhdC5vemd1bEB3ZXN0LmNtdS5lZHUMCxIKQ29uZmVyZW5jZRgBDAsSB1Nlc3Npb24YkU4M
 api = endpoints.api_server([ConferenceApi]) # register API
 
 
