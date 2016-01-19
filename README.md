@@ -31,6 +31,9 @@ App Engine application for the Udacity training course.
 [5]: https://localhost:8080/
 [6]: https://developers.google.com/appengine/docs/python/endpoints/endpoints_tool
 
+# APP:
+Name: mozgul-udacity-fs-p4  
+Access: mozgul-udacity-fs-p4.appspot.com
 
 ## Task 3: 
 
@@ -43,9 +46,14 @@ Let’s say that you don't like workshops and you don't like sessions after 7 pm
 #### Answer:  
 From [docs](https://cloud.google.com/datastore/docs/concepts/queries#Datastore_Restrictions_on_queries):  
 ``` 
-Inequality filters are limited to at most one property  
+Inequality filters are limited to at most one property.  
 
-To avoid having to scan the entire index, the query mechanism relies on all of a query's potential results being adjacent to one another in the index. To satisfy this constraint, a single query may not use inequality comparisons (LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL) on more than one property across all of its filters.
+To avoid having to scan the entire index, the query mechanism relies on all 
+of a query's potential results being adjacent to one another in the index. 
+
+To satisfy this constraint, a single query may not use inequality comparisons 
+(LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL) on more 
+than one property across all of its filters.
 ```
 
 #### Workarounds:  
