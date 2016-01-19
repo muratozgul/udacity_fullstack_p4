@@ -33,7 +33,7 @@ App Engine application for the Udacity training course.
 
 # APP:
 Name: mozgul-udacity-fs-p4  
-Access: [mozgul-udacity-fs-p4.appspot.com]{https://mozgul-udacity-fs-p4.appspot.com}
+Access: [mozgul-udacity-fs-p4.appspot.com](https://mozgul-udacity-fs-p4.appspot.com)
 
 ## Task 3: 
 
