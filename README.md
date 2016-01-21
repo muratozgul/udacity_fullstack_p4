@@ -38,16 +38,39 @@ Access: [mozgul-udacity-fs-p4.appspot.com](https://mozgul-udacity-fs-p4.appspot.
 ## Task 1:
 
 #### Design Decisions:  
-Session is an entity with Conference used as its ancestor.
-Conference serves like a container for sessions. For example we access the date of the session from its parent Conference.  
+#####Profile 1--* Conferences
+Profile has many (created/owned) conferences. Conference belongs to one profile (creator)
+
+#####Conference 1--* Sessions
+Conference has many sessions. Session belongs to one conference
+
+#####Speaker:
+Option 1) Implemented this option. Speaker is a (string) property of session.  
+If app business logic is not focusing on speakers (we are not keeping other information about the speaker other than name), faster implementation, faster read time for sessions and grabbing the speaker name. But duplicating speaker data (name).    
+  
+Option 2) NOT Implemented this option. Speaker as a seperate entity. Use key (or keys) to associate with session. Can store more information about speakers. A single update to a speaker is reflected to every related session, for example no need to iterate through every session object to fix a name typo for speaker.
+
+#####Wishlist:
+Wishlist is a repeated string property field, containing keys of sessions.
+
 
 ```py
+class Profile(ndb.Model):
+    """Profile -- User profile object"""
+    displayName = ndb.StringProperty()
+    mainEmail = ndb.StringProperty()
+    teeShirtSize = ndb.StringProperty(default='NOT_SPECIFIED')
+    conferenceKeysToAttend = ndb.StringProperty(repeated=True)
+    sessionKeysWishlisted = ndb.StringProperty(repeated=True)
+
 class Session(ndb.Model):
+    """Session -- Session object"""
     name = ndb.StringProperty(required=True)
     speaker = ndb.StringProperty()
     sessionType = ndb.StringProperty()
     startTime = ndb.StringProperty()
     duration = ndb.IntegerProperty()
+    highlights = ndb.StringProperty()
 
 class SessionForm(messages.Message):
     """SessionForm -- Session outbound form message"""
@@ -57,9 +80,9 @@ class SessionForm(messages.Message):
     startTime = messages.StringField(4)
     duration = messages.IntegerField(5)
     urlsafe_id = messages.StringField(6)
+    highlights = messages.StringField(7)
 ```  
-For simplicity speaker is a string, not a separate entity.
-Also for simplicity, startTime is a string field.
+
 
 ## Task 3: 
 

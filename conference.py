@@ -590,7 +590,10 @@ class ConferenceApi(remote.Service):
         form = SessionForm()
         for field in form.all_fields():
             if hasattr(session, field.name):
-                setattr(form, field.name, getattr(session, field.name))
+                if field.name == 'startTime':
+                    setattr(form, 'startTime', str(getattr(session, 'startTime')))
+                else:
+                    setattr(form, field.name, getattr(session, field.name))
         # set urlsafe id
         setattr(form, "urlsafe_id", session.key.urlsafe()) 
         form.check_initialized()
@@ -627,6 +630,10 @@ class ConferenceApi(remote.Service):
         data = {field.name: getattr(request, field.name) for field in request.all_fields()}
         del data['websafeConferenceKey']
         del data['urlsafe_id']
+
+        if data['startTime']:
+            #ex: 23:59 (length=5)
+            data['startTime'] = datetime.strptime(data['startTime'][:5], "%H:%M").time()
 
         # add default values for those missing (both data model & outbound Message)
         for df in SESS_DEFAULTS:
@@ -701,8 +708,9 @@ class ConferenceApi(remote.Service):
 
 
 # - - - Task-2 - Add Sessions to User Wishlist - - - - - - - - - - - - - - - - - - - -
-
-    #@ndb.transactional(xg=True)
+    
+    # not cross group, only profile is updating
+    @ndb.transactional
     def _wishlistSession(self, request, wish=True):
         """Add or remove session from user wishlist."""
         retval = None
@@ -736,7 +744,9 @@ class ConferenceApi(remote.Service):
                 retval = False
 
         # write things back to the datastore & return
-        prof.put()
+        if retval:
+            prof.put()
+
         return BooleanMessage(data=retval)
 
     
@@ -801,8 +811,13 @@ class ConferenceApi(remote.Service):
                       name='getLightningTalks')
     def getLightningTalks(self, request):
         """query for all the sessions that are between 5-20 mins long"""
+        #queries that need index.yaml update:
+        #https://cloud.google.com/appengine/docs/python/datastore/queries?csw=1#which_queries_need_indexes
+        
+        #try gql:
         #https://cloud.google.com/appengine/docs/python/datastore/gqlreference
-        sessions = ndb.gql("SELECT * FROM Session WHERE duration >= 5 AND duration <= 20").fetch()
+        sessions = ndb.gql("SELECT * FROM Session WHERE duration >= 5" + 
+            " AND duration <= 20 ORDER BY duration ASC, name ASC").fetch()
 
         # return set of Sessions
         return SessionForms(items=[self._copySessionToForm(session) for session in sessions])
@@ -830,10 +845,6 @@ class ConferenceApi(remote.Service):
         return StringMessage(data=memcache.get(MEMCACHE_FEATURED_SPEAKER_KEY) or "")
 
 
-#ahhkZXZ-bW96Z3VsLXVkYWNpdHktZnMtcDRyNQsSB1Byb2ZpbGUiGG11cmF0Lm96Z3VsQHdlc3QuY211LmVkdQwLEgpDb25mZXJlbmNlGAEM
-#ahZzfm1vemd1bC11ZGFjaXR5LWZzLXA0cjULEgdQcm9maWxlIhhtdXJhdC5vemd1bEB3ZXN0LmNtdS5lZHUMCxIKQ29uZmVyZW5jZRgBDA
-
-#ahZzfm1vemd1bC11ZGFjaXR5LWZzLXA0ckMLEgdQcm9maWxlIhhtdXJhdC5vemd1bEB3ZXN0LmNtdS5lZHUMCxIKQ29uZmVyZW5jZRgBDAsSB1Nlc3Npb24YkU4M
 api = endpoints.api_server([ConferenceApi]) # register API
 
 

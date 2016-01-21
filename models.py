@@ -111,11 +111,13 @@ class ConferenceQueryForms(messages.Message):
     filters = messages.MessageField(ConferenceQueryForm, 1, repeated=True)
 
 class Session(ndb.Model):
+    """Session -- Session object"""
     name = ndb.StringProperty(required=True)
     speaker = ndb.StringProperty()
     sessionType = ndb.StringProperty()
-    startTime = ndb.StringProperty()
+    startTime = ndb.TimeProperty()
     duration = ndb.IntegerProperty()
+    highlights = ndb.StringProperty()
 
 class SessionForm(messages.Message):
     """SessionForm -- Session outbound form message"""
@@ -125,6 +127,7 @@ class SessionForm(messages.Message):
     startTime = messages.StringField(4)
     duration = messages.IntegerField(5)
     urlsafe_id = messages.StringField(6)
+    highlights = messages.StringField(7)
 
 class SessionForms(messages.Message):
     items = messages.MessageField(SessionForm, 1, repeated=True)
